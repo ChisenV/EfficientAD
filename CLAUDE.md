@@ -23,22 +23,55 @@ python efficientad.py --dataset mvtec_ad --subdataset bottle \
 python efficientad.py --dataset mvtec_loco --subdataset breakfast_box
 ```
 
-### Evaluation (requires separately downloaded MVTec eval code)
+### Evaluation
+
+#### MVTec AD (requires separately downloaded eval code)
 
 ```bash
-# MVTec AD
 python mvtec_ad_evaluation/evaluate_experiment.py \
     --dataset_base_dir './mvtec_anomaly_detection/' \
     --anomaly_maps_dir './output/1/anomaly_maps/mvtec_ad/' \
     --output_dir './output/1/metrics/mvtec_ad/' \
     --evaluated_objects bottle
+```
 
-# MVTec LOCO
+#### MVTec LOCO (`mvtec_loco_ad_evaluation/` 已包含在仓库中)
+
+异常图要求：每个测试样本必须有对应的 `.tiff` 文件，目录结构为 `<anomaly_maps_dir>/<object_name>/test/<defect_name>/<image_id>.tiff`。
+
+**单个对象评估**（计算 sPRO 曲线下面积 + 图像级 AUC-ROC）：
+
+```bash
 python mvtec_loco_ad_evaluation/evaluate_experiment.py \
+    --object_name breakfast_box \
     --dataset_base_dir './mvtec_loco_anomaly_detection/' \
     --anomaly_maps_dir './output/1/anomaly_maps/mvtec_loco/' \
-    --output_dir './output/1/metrics/mvtec_loco/' \
-    --object_name breakfast_box
+    --output_dir './output/1/metrics/mvtec_loco/'
+```
+
+可选参数：`--num_parallel_workers N`（并行CPU数）、`--curve_max_distance 0.001`（sPRO曲线精度）。
+
+**批量评估多个实验**（需要 `config.json` 定义实验路径）：
+
+```bash
+python mvtec_loco_ad_evaluation/evaluate_multiple_experiments.py \
+    --dataset_base_dir './mvtec_loco_anomaly_detection/' \
+    --experiment_configs 'experiment_configs.json' \
+    --output_dir './output/1/metrics/mvtec_loco/'
+```
+
+**查看结果表格**（在评估完成后使用）：
+
+```bash
+# 像素级定位结果 (AUC-sPRO)
+python mvtec_loco_ad_evaluation/print_metrics.py \
+    --metrics_folder './output/1/metrics/mvtec_loco/' \
+    --metric_type localization --integration_limit 0.3
+
+# 图像级分类结果 (AUC-ROC)
+python mvtec_loco_ad_evaluation/print_metrics.py \
+    --metrics_folder './output/1/metrics/mvtec_loco/' \
+    --metric_type classification
 ```
 
 ### Teacher Pretraining
