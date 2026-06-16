@@ -283,7 +283,7 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
 
         defect_class = os.path.basename(os.path.dirname(path))
         if test_output_dir is not None:
-            img_nm = os.path.split(path)[1].split('.')[0]
+            img_nm = os.path.split(path)[1].rsplit('.', 1)[0]
             if not os.path.exists(os.path.join(test_output_dir, defect_class)):
                 os.makedirs(os.path.join(test_output_dir, defect_class))
             file = os.path.join(test_output_dir, defect_class, img_nm + '.tiff')
