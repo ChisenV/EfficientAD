@@ -84,14 +84,18 @@ def main():
     test_output_dir = os.path.join(config.output_dir, 'anomaly_maps',
                                    config.dataset, config.subdataset, 'test')
     os.makedirs(train_output_dir)
-    os.makedirs(test_output_dir)
 
     # load data
     full_train_set = ImageFolderWithoutTarget(
         os.path.join(dataset_path, config.subdataset, 'train'),
         transform=transforms.Lambda(train_transform))
-    test_set = ImageFolderWithPath(
-        os.path.join(dataset_path, config.subdataset, 'test'))
+    test_path = os.path.join(dataset_path, config.subdataset, 'test')
+    if os.path.isdir(test_path):
+        test_set = ImageFolderWithPath(test_path)
+        os.makedirs(test_output_dir)
+    else:
+        test_set = None
+        print('Test set not found at {}. Skipping evaluation.'.format(test_path))
     if config.dataset == 'mvtec_ad':
         # mvtec dataset paper recommend 10% validation set
         train_size = int(0.9 * len(full_train_set))
@@ -214,7 +218,7 @@ def main():
             torch.save(autoencoder, os.path.join(train_output_dir,
                                                  'autoencoder_tmp.pth'))
 
-        if iteration % 10000 == 0 and iteration > 0:
+        if iteration % 10000 == 0 and iteration > 0 and test_set is not None:
             # run intermediate evaluation
             teacher.eval()
             student.eval()
@@ -247,17 +251,21 @@ def main():
     torch.save(autoencoder, os.path.join(train_output_dir,
                                          'autoencoder_final.pth'))
 
-    q_st_start, q_st_end, q_ae_start, q_ae_end = map_normalization(
-        validation_loader=validation_loader, teacher=teacher, student=student,
-        autoencoder=autoencoder, teacher_mean=teacher_mean,
-        teacher_std=teacher_std, desc='Final map normalization')
-    auc = test(
-        test_set=test_set, teacher=teacher, student=student,
-        autoencoder=autoencoder, teacher_mean=teacher_mean,
-        teacher_std=teacher_std, q_st_start=q_st_start, q_st_end=q_st_end,
-        q_ae_start=q_ae_start, q_ae_end=q_ae_end,
-        test_output_dir=test_output_dir, desc='Final inference')
-    print('Final image auc: {:.4f}'.format(auc))
+    if test_set is not None:
+        q_st_start, q_st_end, q_ae_start, q_ae_end = map_normalization(
+            validation_loader=validation_loader, teacher=teacher,
+            student=student, autoencoder=autoencoder,
+            teacher_mean=teacher_mean, teacher_std=teacher_std,
+            desc='Final map normalization')
+        auc = test(
+            test_set=test_set, teacher=teacher, student=student,
+            autoencoder=autoencoder, teacher_mean=teacher_mean,
+            teacher_std=teacher_std, q_st_start=q_st_start,
+            q_st_end=q_st_end, q_ae_start=q_ae_start, q_ae_end=q_ae_end,
+            test_output_dir=test_output_dir, desc='Final inference')
+        print('Final image auc: {:.4f}'.format(auc))
+    else:
+        print('Training complete. Skipped evaluation (no test set).')
 
 def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
          q_st_start, q_st_end, q_ae_start, q_ae_end, test_output_dir=None,

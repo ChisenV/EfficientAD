@@ -8,3 +8,17 @@ outputs
 results
 
 *.tar.xz
+
+# Cache
+cache/
+
+# Logs
+*.log
+
+# Hook markers
+.dirty
+
+# Database
+*.db
+*.db-wal
+*.db-shm
