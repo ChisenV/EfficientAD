@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import tifffile
 from PIL import Image, ImageDraw, ImageFont
+
 def get_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--anomaly_dir', required=True,
@@ -23,6 +24,7 @@ def get_argparse():
     parser.add_argument('--alpha', type=float, default=0.4,
                         help='Heatmap overlay opacity (default 0.4)')
     return parser.parse_args()
+
 def jet_colormap(normalized):
     x = normalized * 255
     r = np.clip(np.minimum(4 * x - 384, 512 - 4 * x), 0, 255).astype(np.uint8)
@@ -65,6 +67,7 @@ def find_original(anomaly_maps_root, original_dir):
                     mapping[tiff_path] = candidate
                     break
     return mapping
+
 def make_composite(original, heatmap_img, overlay_img, score, bboxes=None):
     w, h = original.size
     pad = 4
@@ -93,6 +96,17 @@ def make_composite(original, heatmap_img, overlay_img, score, bboxes=None):
                           (255, 0, 0), 2)
         composite = Image.fromarray(composite_np)
     return composite
+
+def find_connected_components(binary_mask):
+    """Return list of (x, y, w, h) bounding boxes using OpenCV connectedComponentsWithStats."""
+    binary_u8 = binary_mask.astype(np.uint8)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        binary_u8, connectivity=4)
+    bboxes = []
+    for i in range(1, num_labels):  # skip label 0 (background)
+        x, y, w, h, area = stats[i]
+        bboxes.append((x, y, w, h))
+    return bboxes
 
 def main():
     config = get_argparse()
@@ -144,14 +158,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-def find_connected_components(binary_mask):
-    """Return list of (x, y, w, h) bounding boxes using OpenCV connectedComponentsWithStats."""
-    binary_u8 = binary_mask.astype(np.uint8)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        binary_u8, connectivity=4)
-    bboxes = []
-    for i in range(1, num_labels):  # skip label 0 (background)
-        x, y, w, h, area = stats[i]
-        bboxes.append((x, y, w, h))
-    return bboxes
