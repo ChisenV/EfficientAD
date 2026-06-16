@@ -27,7 +27,7 @@ def get_argparse():
 
 # variables
 model_size = 'small'
-imagenet_train_path = './ILSVRC/Data/CLS-LOC/train'
+imagenet_train_path = r'D:\wqs\github\EfficientAD\mvtec_loco_ad\juice_bottle\train'
 seed = 42
 on_gpu = torch.cuda.is_available()
 device = 'cuda' if on_gpu else 'cpu'
