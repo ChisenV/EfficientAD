@@ -23,12 +23,15 @@ def get_argparse():
         epilog='Text at the bottom of help')
     parser.add_argument('-o', '--output_folder',
                         default='output/pretraining/1/')
+    parser.add_argument('-m', '--model_size', default='small',
+                        choices=['small', 'medium'])
+    parser.add_argument('-i', '--imagenet_train_path', required=True,
+                        help='Path to ImageNet (or general image) training directory')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed')
     return parser.parse_args()
 
 # variables
-model_size = 'small'
-imagenet_train_path = r'D:\wqs\github\EfficientAD\mvtec_loco_ad\juice_bottle\train'
-seed = 42
 on_gpu = torch.cuda.is_available()
 device = 'cuda' if on_gpu else 'cpu'
 
@@ -51,11 +54,10 @@ def train_transform(image):
     return extractor_transform(image), pdn_transform(image)
 
 def main():
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
     config = get_argparse()
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
+    random.seed(config.seed)
 
     os.makedirs(config.output_folder)
 
@@ -67,14 +69,14 @@ def main():
                                  device=device,
                                  input_shape=(3, 512, 512))
 
-    if model_size == 'small':
+    if config.model_size == 'small':
         pdn = get_pdn_small(out_channels, padding=True)
-    elif model_size == 'medium':
+    elif config.model_size == 'medium':
         pdn = get_pdn_medium(out_channels, padding=True)
     else:
         raise Exception()
 
-    train_set = ImageFolderWithoutTarget(imagenet_train_path,
+    train_set = ImageFolderWithoutTarget(config.imagenet_train_path,
                                          transform=train_transform)
     train_loader = DataLoader(train_set, batch_size=16, shuffle=True,
                               num_workers=7, pin_memory=True)
@@ -108,16 +110,16 @@ def main():
         if iteration % 10000 == 0:
             torch.save(pdn,
                        os.path.join(config.output_folder,
-                                    f'teacher_{model_size}_tmp.pth'))
+                                    f'teacher_{config.model_size}_tmp.pth'))
             torch.save(pdn.state_dict(),
                        os.path.join(config.output_folder,
-                                    f'teacher_{model_size}_tmp_state.pth'))
+                                    f'teacher_{config.model_size}_tmp_state.pth'))
     torch.save(pdn,
                os.path.join(config.output_folder,
-                            f'teacher_{model_size}_final.pth'))
+                            f'teacher_{config.model_size}_final.pth'))
     torch.save(pdn.state_dict(),
                os.path.join(config.output_folder,
-                            f'teacher_{model_size}_final_state.pth'))
+                            f'teacher_{config.model_size}_final_state.pth'))
 
 
 @torch.no_grad()
